@@ -41,6 +41,53 @@ func (reducer *BlockMapReducer) Wait() error {
 	reducer.t.Wait()
 }
 
+func (reducer *BlockMapReducer) loop() {
+	client, err := rpc.Dial(addr)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	// Get config.
+	log.Println("---> GetConfig()")
+	config, err := client.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Use the last irreversible block number as the initial last block number.
+	props, err := client.GetDynamicGlobalProperties()
+	if err != nil {
+		return err
+	}
+	lastBlock := props.LastIrreversibleBlockNum
+
+	// Keep processing incoming blocks forever.
+	log.Printf("---> Entering the block processing loop (last block = %v)\n", lastBlock)
+	for {
+		// Get current properties.
+		props, err := client.GetDynamicGlobalProperties()
+		if err != nil {
+			return err
+		}
+
+		// Process new blocks.
+		for props.LastIrreversibleBlockNum-lastBlock > 0 {
+			block, err := client.GetBlock(lastBlock)
+			if err != nil {
+				return err
+			}
+
+			reducer.ProcessBlock()
+
+			lastBlock++
+		}
+
+		// Sleep for STEEMIT_BLOCK_INTERVAL seconds before the next iteration.
+		time.Sleep(time.Duration(config.SteemitBlockInterval) * time.Second)
+	}
+}
+
 func (reducer *BlockMapReducer) emit(value interface{}) error {
 	select {
 	case reducer.emitCh <- value:
