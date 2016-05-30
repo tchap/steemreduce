@@ -73,7 +73,7 @@ func Reduce(client *rpc.Client, _acc, _next interface{}) error {
 	story := _next.(*Story)
 
 	// In case we have already seen the story, we are done here.
-	if _, ok := acc.ProcessedStories[story.Title]; ok {
+	if _, ok := acc.ProcessedStories[story.Permlink]; ok {
 		return nil
 	}
 
