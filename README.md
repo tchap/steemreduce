@@ -78,6 +78,10 @@ $ ./steemreduce -h
 
 for that.
 
+## Roadmap
+
+1. Make it possible to start where finished last time.
+
 ## License
 
 `MIT`, see the `LICENSE` file.
