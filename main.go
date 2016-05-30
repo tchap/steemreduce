@@ -19,10 +19,21 @@ func _main() error {
 	flag.Parse()
 
 	var (
-		rpcEndpoint   = *flagRPCEndpoint
-		startingBlock = uint32(*flagStartingBlock)
+		endpointAddress = *flagRPCEndpoint
+		startingBlock   = uint32(*flagStartingBlock)
 	)
 
-	// Run the whole thing.
-	return NewSteemReducer(rpcEndpoint).Run(startingBlock)
+	// Instantiate a BlockMapReducer.
+	reducer := NewBlockMapReducer(endpointAddress)
+
+	// Start catching signals.
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-signalCh
+		reducer.Interrupt()
+	}()
+
+	// Run.
+	reducer.Run(startingBlock).Wait()
 }
