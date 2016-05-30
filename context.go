@@ -90,6 +90,7 @@ func (ctx *Context) blockFetcher() error {
 	bar := pb.New(int(numBlocks))
 	bar.Width = 80
 	bar.ShowTimeLeft = true
+	bar.ShowFinalTime = true
 	bar.RefreshRate = 5 * time.Second
 	time.AfterFunc(1*time.Second, func() {
 		bar.Start()
@@ -113,6 +114,7 @@ func (ctx *Context) blockFetcher() error {
 	}
 
 	// Signal that all blocks have been enqueued.
+	bar.FinishPrint("All blocks fetched, waiting for MapReduce to finish ...")
 	close(ctx.mapCh)
 	return nil
 }

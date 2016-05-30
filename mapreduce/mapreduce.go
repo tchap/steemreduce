@@ -7,23 +7,25 @@ import (
 	"text/tabwriter"
 
 	"github.com/go-steem/rpc"
+	"github.com/go-steem/rpc/types"
 )
 
 const Author = "void"
 
-type Value struct {
+type Story struct {
+	BlockNum      *types.Int
 	Title         string
 	PendingPayout float64
 }
 
 type Accumulator struct {
-	Stories            []*Value
+	Stories            []*Story
 	PendingPayoutTotal float64
 }
 
 func NewAccumulator(client *rpc.Client) (*Accumulator, error) {
 	return &Accumulator{
-		Stories: make([]*Value, 0, 100),
+		Stories: make([]*Story, 0, 100),
 	}, nil
 }
 
@@ -52,7 +54,11 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 						return err
 					}
 
-					v := &Value{content.Title, payout}
+					v := &Story{
+						BlockNum:      tx.RefBlockNum,
+						Title:         content.Title,
+						PendingPayout: payout,
+					}
 					if err := emit(v); err != nil {
 						return err
 					}
@@ -66,10 +72,10 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 
 func Reduce(_acc, _next interface{}) error {
 	acc := _acc.(*Accumulator)
-	next := _next.(*Value)
+	story := _next.(*Story)
 
-	acc.Stories = append(acc.Stories, next)
-	acc.PendingPayoutTotal += next.PendingPayout
+	acc.Stories = append(acc.Stories, story)
+	acc.PendingPayoutTotal += story.PendingPayout
 	return nil
 }
 
@@ -77,12 +83,15 @@ func WriteResults(_acc interface{}, writer io.Writer) error {
 	acc := _acc.(*Accumulator)
 
 	tw := tabwriter.NewWriter(writer, 0, 8, 0, '\t', 0)
-	fmt.Fprint(tw, "Title\tPending Payout\n")
-	fmt.Fprint(tw, "=====\t==============\n")
+	fmt.Fprintln(tw)
+	fmt.Fprint(tw, "Block\tTitle\tPending Payout\n")
+	fmt.Fprint(tw, "=====\t=====\t==============\n")
 	for _, story := range acc.Stories {
-		fmt.Fprintf(tw, "%v\t%v\n", story.Title, story.PendingPayout)
+		fmt.Fprintf(tw, "%v\t%v\t%v\n", story.BlockNum, story.Title, story.PendingPayout)
 	}
-	fmt.Fprint(tw, "\nTotal pending payout: %v\n", acc.PendingPayoutTotal)
+	fmt.Fprint(tw, "\n----------------------------------------\n")
+	fmt.Fprintf(tw, "\nTotal pending payout: %v\n", acc.PendingPayoutTotal)
+	fmt.Fprintln(tw)
 
 	return tw.Flush()
 }
