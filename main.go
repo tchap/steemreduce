@@ -31,6 +31,7 @@ func _main() error {
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-signalCh
+		signal.Stop(signalCh)
 		reducer.Interrupt()
 	}()
 
