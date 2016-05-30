@@ -48,6 +48,7 @@ func NewContext(client *rpc.Client, blockRangeFrom, blockRangeTo uint32) *Contex
 	ctx.t.Go(ctx.reducer)
 
 	// Close the reduce channel once all mappers are done.
+	fmt.Printf("---> Mapper: Spawning %v threads ...\n", numMappers)
 	ctx.wg.Add(numMappers)
 	go func() {
 		ctx.wg.Wait()
@@ -97,7 +98,7 @@ func (ctx *Context) blockFetcher() error {
 	})
 
 	// Fetch all blocks matching the given range.
-	fmt.Printf("---> BlockFetcher: Fetching blocks in range [%v, %v]\n", from, to)
+	fmt.Printf("---> Fetcher: Fetching blocks in range [%v, %v]\n", from, to)
 	for next := from; next <= to; next++ {
 		block, err := client.GetBlock(next)
 		if err != nil {
@@ -114,7 +115,7 @@ func (ctx *Context) blockFetcher() error {
 	}
 
 	// Signal that all blocks have been enqueued.
-	bar.FinishPrint("---> BlockFetcher: All blocks fetched")
+	bar.FinishPrint("---> Fetcher: All blocks fetched and enqueued")
 	close(ctx.mapCh)
 	return nil
 }
@@ -161,6 +162,7 @@ func (ctx *Context) reducer() error {
 		select {
 		case next, ok := <-ctx.reduceCh:
 			if !ok {
+				fmt.Println("---> Reducer: We are done, writing the output ...")
 				return ctx.dump(acc)
 			}
 			if err := mapreduce.Reduce(ctx.client, acc, next); err != nil {
