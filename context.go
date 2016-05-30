@@ -114,7 +114,7 @@ func (ctx *Context) blockFetcher() error {
 	}
 
 	// Signal that all blocks have been enqueued.
-	bar.FinishPrint("All blocks fetched, waiting for MapReduce to finish ...")
+	bar.FinishPrint("---> BlockFetcher: All blocks fetched")
 	close(ctx.mapCh)
 	return nil
 }
