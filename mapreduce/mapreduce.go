@@ -14,24 +14,27 @@ const Author = "void"
 type Story struct {
 	BlockNum      uint32
 	Title         string
+	Permlink      string
 	PendingPayout float64
 }
 
 type Accumulator struct {
-	Stories            map[string]*Story
-	PendingPayoutTotal float64
+	Stories            []*Story
+	ProcessedStories   map[string]struct{}
+	TotalPendingPayout float64
 }
 
 // NewAccumulator returns an empty accumulator.
 // No stories in the map, pending payout total set to 0.
 func NewAccumulator(client *rpc.Client) (*Accumulator, error) {
 	return &Accumulator{
-		Stories: make(map[string]*Story, 100),
+		Stories:          make([]*Story, 0, 100),
+		ProcessedStories: make(map[string]struct{}, 100),
 	}, nil
 }
 
 // Map in this case emits a value for every story operation by the given author.
-func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) error {
+func Map(client *rpc.Client, emit func(interface{}) error, block *rpc.Block) error {
 	for _, tx := range block.Transactions {
 		for _, op := range tx.Operations {
 			switch body := op.Body.(type) {
@@ -46,23 +49,11 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 					continue
 				}
 
-				// Get content metadata.
-				content, err := client.GetContent(body.Author, body.Permlink)
-				if err != nil {
-					return err
-				}
-
-				// Convert the pending payout string to float64.
-				payout, err := steemToFloat64(content.PendingPayoutValue)
-				if err != nil {
-					return err
-				}
-
 				// Assemble the value and emit it.
 				value := &Story{
-					BlockNum:      block.Number,
-					Title:         content.Title,
-					PendingPayout: payout,
+					BlockNum: block.Number,
+					Title:    body.Title,
+					Permlink: body.Permlink,
 				}
 				if err := emit(value); err != nil {
 					return err
@@ -76,21 +67,37 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 
 // Reduce stores the story in the map in case it is a new story operation
 // and adds the story pending payout to the sum of all pending payouts.
-func Reduce(_acc, _next interface{}) error {
+func Reduce(client *rpc.Client, _acc, _next interface{}) error {
 	// We need to do type assertions here.
 	acc := _acc.(*Accumulator)
 	story := _next.(*Story)
 
-	// We have already seen the story.
-	if _, ok := acc.Stories[story.Title]; ok {
+	// In case we have already seen the story, we are done here.
+	if _, ok := acc.ProcessedStories[story.Title]; ok {
 		return nil
 	}
 
-	// Store the story in the map.
-	acc.Stories[story.Title] = story
+	// Get current pending payout.
+	content, err := client.GetContent(Author, story.Permlink)
+	if err != nil {
+		return err
+	}
+
+	// Convert to float64.
+	payout, err := steemToFloat64(content.PendingPayoutValue)
+	if err != nil {
+		return err
+	}
+
+	// Store the payout value in the story object.
+	story.PendingPayout = payout
+
+	// Store the story in the map and mark it as processed.
+	acc.Stories = append(acc.Stories, story)
+	acc.ProcessedStories[story.Permlink] = struct{}{}
 
 	// Add the pending payout.
-	acc.PendingPayoutTotal += story.PendingPayout
+	acc.TotalPendingPayout += story.PendingPayout
 
 	// Done.
 	return nil
@@ -109,7 +116,7 @@ func WriteResults(_acc interface{}, writer io.Writer) error {
 	for _, story := range acc.Stories {
 		fmt.Fprintf(tw, "%v\t%v\t%v\n", story.BlockNum, story.Title, story.PendingPayout)
 	}
-	fmt.Fprintf(tw, "\nTotal pending payout: %v\n\n", acc.PendingPayoutTotal)
+	fmt.Fprintf(tw, "\nTotal pending payout: %v\n\n", acc.TotalPendingPayout)
 
 	// Flush the buffer.
 	return tw.Flush()

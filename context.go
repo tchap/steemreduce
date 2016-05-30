@@ -128,7 +128,7 @@ func (ctx *Context) mapper() error {
 			if !ok {
 				return nil
 			}
-			if err := mapreduce.Map(ctx.client, block, ctx.emit); err != nil {
+			if err := mapreduce.Map(ctx.client, ctx.emit, block); err != nil {
 				if err == tomb.ErrDying {
 					return nil
 				}
@@ -163,7 +163,7 @@ func (ctx *Context) reducer() error {
 			if !ok {
 				return ctx.dump(acc)
 			}
-			if err := mapreduce.Reduce(acc, next); err != nil {
+			if err := mapreduce.Reduce(ctx.client, acc, next); err != nil {
 				return err
 			}
 		case <-ctx.t.Dying():
