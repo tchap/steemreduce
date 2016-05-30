@@ -11,11 +11,15 @@ func main() {
 }
 
 func _main() error {
-	flagStartingBlock := flag.Uint("starting_block", 0, "block number to start with")
+	// Process command line flags.
+	flagStartingBlock := flag.Uint(
+		"starting_block", 0, "block number to start with")
+	flagSourceDirectory := flag.String(
+		"source_directory", ".", "directory containing your MapReduce implementation")
 	flag.Parse()
 
 	var (
-		startingBlock = uint32(*flagStartingBlock)
+		startingBlock   = uint32(*flagStartingBlock)
+		sourceDirectory = *flagSourceDirectory
 	)
-
 }
