@@ -7,13 +7,12 @@ import (
 	"text/tabwriter"
 
 	"github.com/go-steem/rpc"
-	"github.com/go-steem/rpc/types"
 )
 
 const Author = "void"
 
 type Story struct {
-	BlockNum      *types.Int
+	BlockNum      uint32
 	Title         string
 	PendingPayout float64
 }
@@ -55,7 +54,7 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 					}
 
 					v := &Story{
-						BlockNum:      tx.RefBlockNum,
+						BlockNum:      block.Number,
 						Title:         content.Title,
 						PendingPayout: payout,
 					}
@@ -89,9 +88,7 @@ func WriteResults(_acc interface{}, writer io.Writer) error {
 	for _, story := range acc.Stories {
 		fmt.Fprintf(tw, "%v\t%v\t%v\n", story.BlockNum, story.Title, story.PendingPayout)
 	}
-	fmt.Fprint(tw, "\n----------------------------------------\n")
-	fmt.Fprintf(tw, "\nTotal pending payout: %v\n", acc.PendingPayoutTotal)
-	fmt.Fprintln(tw)
+	fmt.Fprintf(tw, "\nTotal pending payout: %v\n\n", acc.PendingPayoutTotal)
 
 	return tw.Flush()
 }
