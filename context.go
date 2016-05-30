@@ -1,8 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"sync"
+
+	"github.com/tchap/steemreduce/mapreduce"
 
 	"github.com/go-steem/rpc"
 	"gopkg.in/tomb.v2"
@@ -11,34 +15,40 @@ import (
 type Context struct {
 	client *rpc.Client
 
-	fromBlockNum uint32
-	toBlockNum   uint32
+	blockRangeFrom uint32
+	blockRangeTo   uint32
 
-	mappersGroup sync.WaitGroup
-	t            tomb.Tomb
+	mapCh    chan *rpc.Block
+	reduceCh chan interface{}
+
+	wg sync.WaitGroup
+	t  tomb.Tomb
 }
 
-func NewContext(client *rpc.Client, fromBlockNum, toBlockNum uint32) *Context {
-	ctx := &Context{
-		client:       client,
-		fromBlockNum: fromBlockNum,
-		toBlockNum:   toBlockNum,
-	}
-
-	// Start the fetcher and the reducer.
-	ctx.t.Go(ctx.blockFetcher)
-	ctx.t.Go(ctx.reducer)
-
+func NewContext(client *rpc.Client, blockRangeFrom, blockRangeTo uint32) *Context {
 	// Compute how many mappers to start.
 	numMappers := runtime.NumCPU() - 1
 	if numMappers == 0 {
 		numMappers = 1
 	}
 
+	// Prepare a new Context object.
+	ctx := &Context{
+		client:         client,
+		blockRangeFrom: blockRangeFrom,
+		blockRangeTo:   blockRangeTo,
+		mapCh:          make(chan *rpc.Block, numMappers*10),
+		reduceCh:       make(chan interface{}, 0),
+	}
+
+	// Start the fetcher and the reducer.
+	ctx.t.Go(ctx.blockFetcher)
+	ctx.t.Go(ctx.reducer)
+
 	// Close the reduce channel once all mappers are done.
-	ctx.mappersGroup.Add(numMappers)
+	ctx.wg.Add(numMappers)
 	go func() {
-		ctx.mappersGroup.Wait()
+		ctx.wg.Wait()
 		close(ctx.reduceCh)
 	}()
 
@@ -55,15 +65,15 @@ func (ctx *Context) Interrupt() {
 }
 
 func (ctx *Context) Wait() error {
-	ctx.t.Wait()
+	return ctx.t.Wait()
 }
 
 func (ctx *Context) blockFetcher() error {
 	// Shortcuts.
 	var (
 		client = ctx.client
-		from   = ctx.rangeFrom
-		to     = ctx.rangeTo
+		from   = ctx.blockRangeFrom
+		to     = ctx.blockRangeTo
 	)
 
 	// Make sure we are not doing bullshit.
@@ -81,7 +91,7 @@ func (ctx *Context) blockFetcher() error {
 
 		select {
 		case ctx.mapCh <- block:
-		case ctx.t.Dying():
+		case <-ctx.t.Dying():
 			return nil
 		}
 	}
@@ -92,7 +102,7 @@ func (ctx *Context) blockFetcher() error {
 }
 
 func (ctx *Context) mapper() error {
-	defer ctx.mappers.Done()
+	defer ctx.wg.Done()
 
 	for {
 		select {
@@ -113,8 +123,9 @@ func (ctx *Context) mapper() error {
 func (ctx *Context) emit(v interface{}) error {
 	select {
 	case ctx.reduceCh <- v:
+		return nil
 	case <-ctx.t.Dying():
-		return tomp.ErrDying
+		return tomb.ErrDying
 	}
 }
 
@@ -136,7 +147,7 @@ func (ctx *Context) reducer() error {
 			if err := mapreduce.Reduce(acc, next); err != nil {
 				return err
 			}
-		case ctx.t.Dying():
+		case <-ctx.t.Dying():
 			return nil
 		}
 	}

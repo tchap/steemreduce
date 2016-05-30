@@ -2,17 +2,21 @@ package main
 
 import (
 	"flag"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 	if err := _main(); err != nil {
-		log.Faralln("Error:", err)
+		log.Fatalln("Error:", err)
 	}
 }
 
 func _main() error {
 	// Process command line flags.
-	flagRPCEndpoint = flag.String(
+	flagRPCEndpoint := flag.String(
 		"rpc_endpoint", "ws://localhost:8090", "steemd RPC endpoint address")
 	flagStartingBlock := flag.Uint(
 		"starting_block", 0, "block number to start with")

@@ -1,6 +1,10 @@
 package mapreduce
 
 import (
+	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/go-steem/rpc"
 )
 
@@ -15,11 +19,11 @@ type Accumulator struct {
 	PendingPayout float64
 }
 
-func NewAccumulator(client *rpc.Client) interface{} {
-	return &Accumulator{}
+func NewAccumulator(client *rpc.Client) (*Accumulator, error) {
+	return &Accumulator{}, nil
 }
 
-func Map(client *rpc.Client, block *rpc.Block, emit func(interface{})) error {
+func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) error {
 	for _, tx := range block.Transactions {
 		for _, op := range tx.Operations {
 			switch body := op.Body.(type) {
@@ -48,6 +52,8 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{})) error {
 			}
 		}
 	}
+
+	return nil
 }
 
 func Reduce(_acc, _next interface{}) error {
@@ -55,9 +61,11 @@ func Reduce(_acc, _next interface{}) error {
 	next := _next.(*Value)
 
 	acc.PendingPayout += next.PendingPayout
+	return nil
 }
 
 func WriteResults(_acc interface{}, writer io.Writer) error {
 	acc := _acc.(*Accumulator)
-	fmt.Fprintln(writer, acc.PendingPayout)
+	_, err := fmt.Fprintln(writer, acc.PendingPayout)
+	return err
 }
