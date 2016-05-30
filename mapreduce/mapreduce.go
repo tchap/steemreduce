@@ -15,7 +15,7 @@ type Accumulator struct {
 	PendingPayout float64
 }
 
-func NewAccumulator() interface{} {
+func NewAccumulator(client *rpc.Client) interface{} {
 	return &Accumulator{}
 }
 
@@ -41,7 +41,9 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{})) error {
 
 					v := &Value{content.URL, payout}
 					fmt.Println(v)
-					exit(v)
+					if err := emit(v); err != nil {
+						return err
+					}
 				}
 			}
 		}

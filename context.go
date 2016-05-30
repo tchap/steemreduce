@@ -97,15 +97,11 @@ func (ctx *Context) mapper() error {
 	for {
 		select {
 		case block := <-ctx.mapCh:
-			v, err := mapreduce.Map(ctx.client, block)
-			if err != nil {
+			if err := mapreduce.Map(ctx.client, block, ctx.emit); err != nil {
+				if err == tomb.ErrDying {
+					return nil
+				}
 				return err
-			}
-
-			select {
-			case ctx.reduceCh <- v:
-			case <-ctx.t.Dying():
-				return nil
 			}
 
 		case <-ctx.t.Dying():
@@ -114,9 +110,17 @@ func (ctx *Context) mapper() error {
 	}
 }
 
+func (ctx *Context) emit(v interface{}) error {
+	select {
+	case ctx.reduceCh <- v:
+	case <-ctx.t.Dying():
+		return tomp.ErrDying
+	}
+}
+
 func (ctx *Context) reducer() error {
 	fmt.Println("---> Reducer: Getting the initial value ...")
-	acc, err := mapreduce.InitialValue(ctx.client)
+	acc, err := mapreduce.NewAccumulator(ctx.client)
 	if err != nil {
 		return err
 	}
@@ -129,8 +133,7 @@ func (ctx *Context) reducer() error {
 				return ctx.dump(acc)
 			}
 
-			acc, err = mapreduce.Reduce(acc, next)
-			if err != nil {
+			if err := mapreduce.Reduce(acc, next); err != nil {
 				return err
 			}
 		case ctx.t.Dying():
