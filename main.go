@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/go-steem/rpc"
 )
 
 func main() {
@@ -32,8 +34,7 @@ func _main() error {
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start MapReduce.
-	reducer := NewBlockMapReducer(endpointAddress)
-	ctx, err := reducer.Start(startingBlock)
+	ctx, err := start(endpointAddress, startingBlock)
 	if err != nil {
 		return err
 	}
@@ -47,4 +48,22 @@ func _main() error {
 
 	// Wait.
 	return ctx.Wait()
+}
+
+func start(endpointAddress string, startingBlockNum uint32) (*Context, error) {
+	// Get the RPC client.
+	client, err := rpc.Dial(endpointAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the ending block number.
+	props, err := client.GetDynamicGlobalProperties()
+	if err != nil {
+		return nil, err
+	}
+	endingBlockNum := props.LastIrreversibleBlockNum
+
+	// Start.
+	return NewContext(client, startingBlockNum, endingBlockNum), nil
 }
