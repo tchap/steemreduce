@@ -36,7 +36,7 @@ Total pending payout: 822.9
 
 ## How to Implement Your MapReduce
 
-Step 0: Install [Go](https://golang.org/dl/).
+Before even starting, you need to install [Go](https://golang.org/dl/).
 
 Then you need to set up a [Go workspace](https://golang.org/doc/code.html#Workspaces)
 and clone this package into the right directory:
@@ -47,7 +47,11 @@ $ git clone https://github.com/tchap/steemreduce "$WORKSPACE/src/github.com/tcha
 
 And now, you can finally start implementing your MapReduce.
 
-So, go to check the `mapreduce` directory. When you open `mapreduce.go`, you will
+```
+cd "$WORKSPACE/src/github.com/tchap/steemreduce"
+```
+
+Now, go to check the `mapreduce` directory. When you open `mapreduce.go`, you will
 see a few exported functions there. These functions form the implementation of
 MapReduce. The `mapreduce` package as implemented here is just an example that
 collects and prints the pending payout for all stories published by the given
@@ -59,7 +63,20 @@ cp -R mapreduce mapreduce_old
 ``
 
 Now you are ready to start hacking. You can consult `mapreduce_old` any time
-something is not entirely clear.
+something is not entirely clear. When you are done, just run
+
+```
+$ go build
+```
+
+This will place `steemreduce` into the current working directory.
+All that is left is to run the executable with the right flags. Please see
+
+```
+$ ./steemreduce -h
+```
+
+for that.
 
 ## License
 
