@@ -35,5 +35,5 @@ func _main() error {
 	}()
 
 	// Run.
-	reducer.Run(startingBlock).Wait()
+	return reducer.Run(startingBlock).Wait()
 }
