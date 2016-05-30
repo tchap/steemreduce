@@ -10,28 +10,31 @@ thus allowing you to collect data and generate your own statistics. Cool, right?
 ## Example
 
 ```
-$ GOMAXPROCS=1 ./steemreduce \
-    -rpc_endpoint="ws://$(docker-machine ip default):8090" \
-	-starting_block=1700000
-
+$ ./steemreduce -rpc_endpoint="ws://$(docker-machine ip default):8090"
 ---> Mapper: Spawning 3 threads ...
----> Fetcher: Fetching blocks in range [1700000, 1906677]
+---> Fetcher: Fetching blocks in range [0, 1909012]
 ---> Reducer: Getting the initial value ...
 ---> Reducer: Starting to process incoming blocks ...
- 206678 / 206677 [===============================================] 100.00% 3m31s
+ 1909013 / 1909012 [============================================] 100.00% 51m21s
 ---> Fetcher: All blocks fetched and enqueued
 ---> Reducer: We are done, writing the output ...
 $ cat output.txt 
 
-Block   Title                                                Pending Payout
-=====   =====                                                ==============
-1728062	We Are Taught, Yet We Do Not Understand              21.6
-1730710	Accessing steemd RPC endpoint using Golang           0.2
-1786011	Dockerfile for steemd, tuned for performance         36
-1851608	Evaluating Martial Arts                              48.6
-1872747	go-steem/rpc: Golang RPC Client Library for Steem    716.5
+Block   Title                                               Pending Payout
+=====   =====                                               ==============
+1268905 The Body Knows                                      2.6
+1325197 Let it Go, Let it Happen                            444.2
+1473920 So Much Energy is Wasted                            0
+1548838 Accessing steemd RPC endpoint using Golang          0.2
+1592040 The Evolution of Consciousness                      21.7
+1605795 Nobody Has to Be Anybody!                           0
+1728062 We Are Taught, Yet We Do Not Understand             21.5
+1786011 Dockerfile for steemd, tuned for performance        35.7
+1851608 Evaluating Martial Arts                             48.3
+1872747 go-steem/rpc: Golang RPC Client Library for Steem   711.8
+1907611 steemreduce: You personal MapReduce for Steem       836.6
 
-Total pending payout: 822.9
+Total pending payout: 2122.6
 ```
 
 ## How to Implement Your MapReduce
