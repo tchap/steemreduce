@@ -86,6 +86,7 @@ func (ctx *Context) blockFetcher() error {
 	// Progress bar!
 	numBlocks := ctx.blockRangeTo - ctx.blockRangeFrom
 	bar := pb.New(int(numBlocks))
+	bar.Width = 100
 	bar.ShowTimeLeft = true
 	bar.RefreshRate = 5 * time.Second
 	time.AfterFunc(1*time.Second, func() {
@@ -119,14 +120,16 @@ func (ctx *Context) mapper() error {
 
 	for {
 		select {
-		case block := <-ctx.mapCh:
+		case block, ok := <-ctx.mapCh:
+			if !ok {
+				return nil
+			}
 			if err := mapreduce.Map(ctx.client, block, ctx.emit); err != nil {
 				if err == tomb.ErrDying {
 					return nil
 				}
 				return err
 			}
-
 		case <-ctx.t.Dying():
 			return nil
 		}

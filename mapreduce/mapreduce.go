@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"text/tabwriter"
 
 	"github.com/go-steem/rpc"
 )
@@ -11,16 +12,19 @@ import (
 const Author = "void"
 
 type Value struct {
-	URL           string
+	Title         string
 	PendingPayout float64
 }
 
 type Accumulator struct {
-	PendingPayout float64
+	Stories            []*Value
+	PendingPayoutTotal float64
 }
 
 func NewAccumulator(client *rpc.Client) (*Accumulator, error) {
-	return &Accumulator{}, nil
+	return &Accumulator{
+		Stories: make([]*Value, 0, 100),
+	}, nil
 }
 
 func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) error {
@@ -28,10 +32,15 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 		for _, op := range tx.Operations {
 			switch body := op.Body.(type) {
 			case *rpc.CommentOperation:
-				if body.Author == Author && body.IsNewStory() {
+				if body.Author == Author && body.IsStoryOperation() {
 					content, err := client.GetContent(body.Author, body.Permlink)
 					if err != nil {
 						return err
+					}
+
+					// We are done in case this is just an edit.
+					if !content.IsNewStory() {
+						return nil
 					}
 
 					// Drop trailing " STEEM".
@@ -43,8 +52,7 @@ func Map(client *rpc.Client, block *rpc.Block, emit func(interface{}) error) err
 						return err
 					}
 
-					v := &Value{content.URL, payout}
-					fmt.Println(v)
+					v := &Value{content.Title, payout}
 					if err := emit(v); err != nil {
 						return err
 					}
@@ -60,12 +68,21 @@ func Reduce(_acc, _next interface{}) error {
 	acc := _acc.(*Accumulator)
 	next := _next.(*Value)
 
-	acc.PendingPayout += next.PendingPayout
+	acc.Stories = append(acc.Stories, next)
+	acc.PendingPayoutTotal += next.PendingPayout
 	return nil
 }
 
 func WriteResults(_acc interface{}, writer io.Writer) error {
 	acc := _acc.(*Accumulator)
-	_, err := fmt.Fprintln(writer, acc.PendingPayout)
-	return err
+
+	tw := tabwriter.NewWriter(writer, 0, 8, 0, '\t', 0)
+	fmt.Fprint(tw, "Title\tPending Payout\n")
+	fmt.Fprint(tw, "=====\t==============\n")
+	for _, story := range acc.Stories {
+		fmt.Fprintf(tw, "%v\t%v\n", story.Title, story.PendingPayout)
+	}
+	fmt.Fprint(tw, "\nTotal pending payout: %v\n", acc.PendingPayoutTotal)
+
+	return tw.Flush()
 }
