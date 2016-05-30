@@ -73,16 +73,28 @@ func (ctx *Context) blockFetcher() error {
 			return nil
 		}
 	}
+
+	// Signal that all blocks have been enqueued.
 }
 
 func (ctx *Context) mapper() error {
-	select {
-	case block := <-ctx.blockCh:
-		if err := mapreduce.Map(ctx.client, block); err != nil {
-			return err
+	for {
+		select {
+		case block := <-ctx.mapCh:
+			v, err := mapreduce.Map(ctx.client, block)
+			if err != nil {
+				return err
+			}
+
+			select {
+			case ctx.reduceCh <- v:
+			case <-ctx.t.Dying():
+				return nil
+			}
+
+		case <-ctx.t.Dying():
+			return nil
 		}
-	case <-ctx.t.Dying():
-		return nil
 	}
 }
 
@@ -94,21 +106,15 @@ func (ctx *Context) reducer() error {
 	}
 
 	fmt.Println("---> Reducer: Starting to process incoming blocks ...")
-	select {
-	case next := <-ctx.blockCh:
-		acc, err = mapreduce.Reduce(acc, next)
-		if err != nil {
-			return err
+	for {
+		select {
+		case next := <-ctx.reduceCh:
+			acc, err = mapreduce.Reduce(acc, next)
+			if err != nil {
+				return err
+			}
+		case ctx.t.Dying():
+			return nil
 		}
-	case ctx.t.Dying():
-		return nil
-	}
-}
-
-func (ctx *Context) emit(value interface{}) error {
-	select {
-	case ctx.emitCh <- value:
-	case <-ctx.t.Dying:
-		return errors.New("terminating")
 	}
 }
