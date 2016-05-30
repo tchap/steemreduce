@@ -83,6 +83,15 @@ func (ctx *Context) blockFetcher() error {
 		return fmt.Errorf("invalid block range: [%v, %v]", from, to)
 	}
 
+	// Progress bar!
+	numBlocks := ctx.blockRangeTo - ctx.blockRangeFrom
+	bar := pb.New(int(numBlocks))
+	bar.ShowTimeLeft = true
+	bar.RefreshRate = 5 * time.Second
+	time.AfterFunc(1*time.Second, func() {
+		bar.Start()
+	})
+
 	// Fetch all blocks matching the given range.
 	fmt.Printf("---> BlockFetcher: Fetching blocks in range [%v, %v]\n", from, to)
 	for next := from; next <= to; next++ {
@@ -90,6 +99,8 @@ func (ctx *Context) blockFetcher() error {
 		if err != nil {
 			return err
 		}
+
+		bar.Increment()
 
 		select {
 		case ctx.mapCh <- block:
@@ -138,26 +149,16 @@ func (ctx *Context) reducer() error {
 		return err
 	}
 
-	numBlocks := ctx.blockRangeTo - ctx.blockRangeFrom
-	bar := pb.New(int(numBlocks))
-	bar.ShowTimeLeft = true
-	bar.SetRefreshRate(5 * time.Second)
-	bar.Start()
-
 	fmt.Println("---> Reducer: Starting to process incoming blocks ...")
 	for {
 		select {
 		case next, ok := <-ctx.reduceCh:
 			if !ok {
-				bar.FinishPrint("DONE!")
 				return ctx.dump(acc)
 			}
-
 			if err := mapreduce.Reduce(acc, next); err != nil {
 				return err
 			}
-
-			bar.Increment()
 		case <-ctx.t.Dying():
 			return nil
 		}
