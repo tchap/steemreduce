@@ -23,11 +23,14 @@ func _main() error {
 		"rpc_endpoint", "ws://localhost:8090", "steemd RPC endpoint address")
 	flagStartingBlock := flag.Uint(
 		"starting_block", 0, "block number to start with")
+	flagEndingBlock := flag.Uint(
+		"ending_block", 0, "block number to end with")
 	flag.Parse()
 
 	var (
-		endpointAddress = *flagRPCEndpoint
-		startingBlock   = uint32(*flagStartingBlock)
+		endpointAddress  = *flagRPCEndpoint
+		startingBlockNum = uint32(*flagStartingBlock)
+		endingBlockNum   = uint32(*flagEndingBlock)
 	)
 
 	// Start catching signals.
@@ -35,7 +38,7 @@ func _main() error {
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start MapReduce.
-	ctx, err := start(endpointAddress, startingBlock)
+	ctx, err := start(endpointAddress, startingBlockNum, endingBlockNum)
 	if err != nil {
 		return err
 	}
@@ -52,19 +55,21 @@ func _main() error {
 	return ctx.Wait()
 }
 
-func start(endpointAddress string, startingBlockNum uint32) (*Context, error) {
+func start(endpointAddress string, startingBlockNum, endingBlockNum uint32) (*Context, error) {
 	// Get the RPC client.
 	client, err := rpc.Dial(endpointAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the ending block number.
-	props, err := client.GetDynamicGlobalProperties()
-	if err != nil {
-		return nil, err
+	// Get the ending block number if necessary.
+	if endingBlockNum == 0 {
+		props, err := client.GetDynamicGlobalProperties()
+		if err != nil {
+			return nil, err
+		}
+		endingBlockNum = props.LastIrreversibleBlockNum
 	}
-	endingBlockNum := props.LastIrreversibleBlockNum
 
 	// Start.
 	return NewContext(client, startingBlockNum, endingBlockNum), nil
