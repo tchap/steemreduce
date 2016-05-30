@@ -14,7 +14,8 @@ type Context struct {
 	fromBlockNum uint32
 	toBlockNum   uint32
 
-	t tomb.Tomb
+	mappersGroup sync.WaitGroup
+	t            tomb.Tomb
 }
 
 func NewContext(client *rpc.Client, fromBlockNum, toBlockNum uint32) *Context {
@@ -24,13 +25,24 @@ func NewContext(client *rpc.Client, fromBlockNum, toBlockNum uint32) *Context {
 		toBlockNum:   toBlockNum,
 	}
 
+	// Start the fetcher and the reducer.
 	ctx.t.Go(ctx.blockFetcher)
 	ctx.t.Go(ctx.reducer)
 
+	// Compute how many mappers to start.
 	numMappers := runtime.NumCPU() - 1
 	if numMappers == 0 {
 		numMappers = 1
 	}
+
+	// Close the reduce channel once all mappers are done.
+	ctx.mappersGroup.Add(numMappers)
+	go func() {
+		ctx.mappersGroup.Wait()
+		close(ctx.reduceCh)
+	}()
+
+	// Start the mappers.
 	for i := 0; i < numMappers; i++ {
 		ctx.t.Go(ctx.mapper)
 	}
@@ -68,16 +80,20 @@ func (ctx *Context) blockFetcher() error {
 		}
 
 		select {
-		case ctx.blockCh <- block:
+		case ctx.mapCh <- block:
 		case ctx.t.Dying():
 			return nil
 		}
 	}
 
 	// Signal that all blocks have been enqueued.
+	close(ctx.mapCh)
+	return nil
 }
 
 func (ctx *Context) mapper() error {
+	defer ctx.mappers.Done()
+
 	for {
 		select {
 		case block := <-ctx.mapCh:
@@ -108,7 +124,11 @@ func (ctx *Context) reducer() error {
 	fmt.Println("---> Reducer: Starting to process incoming blocks ...")
 	for {
 		select {
-		case next := <-ctx.reduceCh:
+		case next, ok := <-ctx.reduceCh:
+			if !ok {
+				return ctx.dump(acc)
+			}
+
 			acc, err = mapreduce.Reduce(acc, next)
 			if err != nil {
 				return err
@@ -117,4 +137,14 @@ func (ctx *Context) reducer() error {
 			return nil
 		}
 	}
+}
+
+func (ctx *Context) dump(value interface{}) error {
+	dst, err := os.OpenFile("output.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0640)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	return mapreduce.WriteResults(value, dst)
 }
