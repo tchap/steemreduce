@@ -5,9 +5,11 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/tchap/steemreduce/mapreduce"
 
+	"github.com/cheggaaa/pb"
 	"github.com/go-steem/rpc"
 	"gopkg.in/tomb.v2"
 )
@@ -136,17 +138,26 @@ func (ctx *Context) reducer() error {
 		return err
 	}
 
+	numBlocks := ctx.blockRangeTo - ctx.blockRangeFrom
+	bar := pb.New(int(numBlocks))
+	bar.ShowTimeLeft = true
+	bar.SetRefreshRate(5 * time.Second)
+	bar.Start()
+
 	fmt.Println("---> Reducer: Starting to process incoming blocks ...")
 	for {
 		select {
 		case next, ok := <-ctx.reduceCh:
 			if !ok {
+				bar.FinishPrint("DONE!")
 				return ctx.dump(acc)
 			}
 
 			if err := mapreduce.Reduce(acc, next); err != nil {
 				return err
 			}
+
+			bar.Increment()
 		case <-ctx.t.Dying():
 			return nil
 		}
