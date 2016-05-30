@@ -23,18 +23,24 @@ func _main() error {
 		startingBlock   = uint32(*flagStartingBlock)
 	)
 
-	// Instantiate a BlockMapReducer.
-	reducer := NewBlockMapReducer(endpointAddress)
-
 	// Start catching signals.
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start MapReduce.
+	reducer := NewBlockMapReducer(endpointAddress)
+	ctx, err := reducer.Start(startingBlock)
+	if err != nil {
+		return err
+	}
+
+	// Interrupt the process when a signal is received.
 	go func() {
 		<-signalCh
 		signal.Stop(signalCh)
-		reducer.Interrupt()
+		ctx.Interrupt()
 	}()
 
-	// Run.
-	return reducer.Run(startingBlock).Wait()
+	// Wait.
+	return ctx.Wait()
 }

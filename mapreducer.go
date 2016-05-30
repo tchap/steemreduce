@@ -9,28 +9,40 @@ import (
 
 type BlockMapReducer struct {
 	endpointAddress string
-
-	emitCh chan interface{}
-
-	t tomb.Tomb
+	t               *tomb.Tomb
 }
 
 func NewBlockMapReducer(endpointAddress string) *BlockMapReducer {
 	return &BlockMapReducer{
 		endpointAddress: endpointAddress,
 		emitCh:          make(chan interface{}, 0),
+		t:               &tomb.Tomb{},
 	}
 }
 
-func (reducer *BlockMapReducer) Run(startingBlock uint32) error {
-	// XXX: Make sure we can call Run only once.
-
+// XXX: Make sure we can call Run only once.
+func (reducer *BlockMapReducer) Run(startingBlock uint32) (*Context, error) {
 	// Get the RPC client.
 	client, err := rpc.Dial(reducer.endpointAddress)
 	if err != nil {
 		return err
 	}
 
+	// Get the ending block number.
+	props, err := client.GetDynamicGlobalProperties()
+	if err != nil {
+		return err
+	}
+
+	// Store what is needed later in the reducer.
+	reducer.client = client
+	reducer.startingBlock = startingBlock
+	reducer.endingBlock = props.LastIrreversibleBlockNum
+
+	// Start all the goroutines.
+	reducer.t.Go(reducer.blockReader)
+	reducer.t.Go(reducer.loop)
+	return nil
 }
 
 func (reducer *BlockMapReducer) Interrupt() {
@@ -41,7 +53,7 @@ func (reducer *BlockMapReducer) Wait() error {
 	reducer.t.Wait()
 }
 
-func (reducer *BlockMapReducer) loop() {
+func (reducer *BlockMapReducer) blockReader() {
 	client, err := rpc.Dial(addr)
 	if err != nil {
 		return err
@@ -54,13 +66,6 @@ func (reducer *BlockMapReducer) loop() {
 	if err != nil {
 		return err
 	}
-
-	// Use the last irreversible block number as the initial last block number.
-	props, err := client.GetDynamicGlobalProperties()
-	if err != nil {
-		return err
-	}
-	lastBlock := props.LastIrreversibleBlockNum
 
 	// Keep processing incoming blocks forever.
 	log.Printf("---> Entering the block processing loop (last block = %v)\n", lastBlock)
