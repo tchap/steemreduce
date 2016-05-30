@@ -60,7 +60,7 @@ implementation to do what you want:
 
 ```
 cp -R mapreduce mapreduce_old
-``
+```
 
 Now you are ready to start hacking. You can consult `mapreduce_old` any time
 something is not entirely clear. When you are done, just run
