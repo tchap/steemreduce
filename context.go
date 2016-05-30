@@ -78,6 +78,8 @@ func (ctx *Context) blockFetcher() error {
 		to     = ctx.blockRangeTo
 	)
 
+	defer client.Close()
+
 	// Make sure we are not doing bullshit.
 	if from > to {
 		return fmt.Errorf("invalid block range: [%v, %v]", from, to)
@@ -86,7 +88,7 @@ func (ctx *Context) blockFetcher() error {
 	// Progress bar!
 	numBlocks := ctx.blockRangeTo - ctx.blockRangeFrom
 	bar := pb.New(int(numBlocks))
-	bar.Width = 100
+	bar.Width = 80
 	bar.ShowTimeLeft = true
 	bar.RefreshRate = 5 * time.Second
 	time.AfterFunc(1*time.Second, func() {
