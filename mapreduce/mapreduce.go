@@ -103,7 +103,8 @@ func Reduce(client *rpc.Client, _acc, _next interface{}) error {
 	return nil
 }
 
-// WriteResults uses a text/tabwriter to format the output.
+// WriteResults is used to generate output for the resulting accumulator.
+// This implementation uses a text/tabwriter to format the output.
 func WriteResults(_acc interface{}, writer io.Writer) error {
 	// We need to do type assertions here.
 	acc := _acc.(*Accumulator)
