@@ -12,14 +12,17 @@ func main() {
 
 func _main() error {
 	// Process command line flags.
+	flagRPCEndpoint = flag.String(
+		"rpc_endpoint", "ws://localhost:8090", "steemd RPC endpoint address")
 	flagStartingBlock := flag.Uint(
 		"starting_block", 0, "block number to start with")
-	flagSourceDirectory := flag.String(
-		"source_directory", ".", "directory containing your MapReduce implementation")
 	flag.Parse()
 
 	var (
-		startingBlock   = uint32(*flagStartingBlock)
-		sourceDirectory = *flagSourceDirectory
+		rpcEndpoint   = *flagRPCEndpoint
+		startingBlock = uint32(*flagStartingBlock)
 	)
+
+	// Run the whole thing.
+	return NewSteemReducer(rpcEndpoint).Run(startingBlock)
 }
