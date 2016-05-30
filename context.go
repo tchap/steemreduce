@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/go-steem/rpc"
 	"gopkg.in/tomb.v2"
@@ -23,7 +24,7 @@ func NewContext(client *rpc.Client, fromBlockNum, toBlockNum uint32) *Context {
 		toBlockNum:   toBlockNum,
 	}
 
-	ctx.t.Go(ctx.blockReader)
+	ctx.t.Go(ctx.blockFetcher)
 	ctx.t.Go(ctx.reducer)
 
 	return ctx
@@ -37,37 +38,32 @@ func (ctx *Context) Wait() error {
 	ctx.t.Wait()
 }
 
-func (ctx *Context) blockReader() {
-	// Get config.
-	log.Println("---> GetConfig()")
-	config, err := client.GetConfig()
-	if err != nil {
-		return err
+func (ctx *Context) blockFetcher() error {
+	// Shortcuts.
+	var (
+		client = ctx.client
+		from   = ctx.rangeFrom
+		to     = ctx.rangeTo
+	)
+
+	// Make sure we are not doing bullshit.
+	if from > to {
+		return fmt.Errorf("invalid block range: [%v, %v]", from, to)
 	}
 
-	// Keep processing incoming blocks forever.
-	log.Printf("---> Entering the block processing loop (last block = %v)\n", lastBlock)
-	for {
-		// Get current properties.
-		props, err := client.GetDynamicGlobalProperties()
+	// Fetch all blocks matching the given range.
+	fmt.Printf("---> BlockFetcher: Fetching blocks in range [%v, %v]\n", from, to)
+	for next := from; next <= to; next++ {
+		block, err := client.GetBlock(next)
 		if err != nil {
 			return err
 		}
 
-		// Process new blocks.
-		for props.LastIrreversibleBlockNum-lastBlock > 0 {
-			block, err := client.GetBlock(lastBlock)
-			if err != nil {
-				return err
-			}
-
-			ctx.ProcessBlock()
-
-			lastBlock++
+		select {
+		case ctx.blockCh <- block:
+		case ctx.t.Dying:
+			return nil
 		}
-
-		// Sleep for STEEMIT_BLOCK_INTERVAL seconds before the next iteration.
-		time.Sleep(time.Duration(config.SteemitBlockInterval) * time.Second)
 	}
 }
 

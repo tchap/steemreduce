@@ -15,7 +15,7 @@ func NewBlockMapReducer(endpointAddress string) *BlockMapReducer {
 	return &BlockMapReducer{endpointAddress}
 }
 
-func (reducer *BlockMapReducer) Start(startingBlock uint32) (*Context, error) {
+func (reducer *BlockMapReducer) Start(startingBlockNum uint32) (*Context, error) {
 	// Get the RPC client.
 	client, err := rpc.Dial(reducer.endpointAddress)
 	if err != nil {
@@ -27,8 +27,8 @@ func (reducer *BlockMapReducer) Start(startingBlock uint32) (*Context, error) {
 	if err != nil {
 		return err
 	}
-	endingBlock := props.LastIrreversibleBlockNum
+	endingBlockNum := props.LastIrreversibleBlockNum
 
 	// Start.
-	return NewContext(client, startigBlock, endingBlock), nil
+	return NewContext(client, startigBlockNum, endingBlockNum), nil
 }
