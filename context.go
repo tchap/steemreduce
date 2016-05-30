@@ -27,6 +27,14 @@ func NewContext(client *rpc.Client, fromBlockNum, toBlockNum uint32) *Context {
 	ctx.t.Go(ctx.blockFetcher)
 	ctx.t.Go(ctx.reducer)
 
+	numMappers := runtime.NumCPU() - 1
+	if numMappers == 0 {
+		numMappers = 1
+	}
+	for i := 0; i < numMappers; i++ {
+		ctx.t.Go(ctx.mapper)
+	}
+
 	return ctx
 }
 
@@ -65,6 +73,10 @@ func (ctx *Context) blockFetcher() error {
 			return nil
 		}
 	}
+}
+
+func (ctx *Context) mapper() error {
+
 }
 
 func (ctx *Context) emit(value interface{}) error {
