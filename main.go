@@ -1,44 +1,37 @@
 package main
 
 import (
-	"flag"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/tchap/steemreduce/runner"
 
 	"github.com/go-steem/rpc"
 )
 
 func main() {
 	if err := _main(); err != nil {
-		log.Fatalln("Error:", err)
+		fmt.Fprintln(os.Stderr, "\nError:", err)
+		os.Exit(1)
 	}
 }
 
 func _main() error {
-	// Process command line flags.
-	flagRPCEndpoint := flag.String(
-		"rpc_endpoint", "ws://localhost:8090", "steemd RPC endpoint address")
-	flagStartingBlock := flag.Uint(
-		"starting_block", 0, "block number to start with")
-	flagEndingBlock := flag.Uint(
-		"ending_block", 0, "block number to end with")
-	flag.Parse()
-
-	var (
-		endpointAddress  = *flagRPCEndpoint
-		startingBlockNum = uint32(*flagStartingBlock)
-		endingBlockNum   = uint32(*flagEndingBlock)
-	)
+	// Load configuration.
+	config, err := GetConfig()
+	if err != nil {
+		return err
+	}
 
 	// Start catching signals.
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start MapReduce.
-	ctx, err := start(endpointAddress, startingBlockNum, endingBlockNum)
+	ctx, err := start(config)
 	if err != nil {
 		return err
 	}
@@ -55,22 +48,30 @@ func _main() error {
 	return ctx.Wait()
 }
 
-func start(endpointAddress string, startingBlockNum, endingBlockNum uint32) (*Context, error) {
+func start(config *Config) (*runner.Context, error) {
 	// Get the RPC client.
-	client, err := rpc.Dial(endpointAddress)
+	client, err := rpc.Dial(config.RPCEndpointAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the ending block number if necessary.
-	if endingBlockNum == 0 {
-		props, err := client.GetDynamicGlobalProperties()
-		if err != nil {
-			return nil, err
+	// Get the chosen MapReduce implementation.
+	implementation, ok := availableMapReducers[config.MapReduceID]
+	if !ok {
+		fmt.Fprintf(os.Stderr, `
+Unknown MapReduce implementation: "%v"
+
+Available implementations:
+
+`, config.MapReduceID)
+
+		for _, id := range availableMapReducerIDs {
+			fmt.Fprintln(os.Stderr, "    ", id)
 		}
-		endingBlockNum = props.LastIrreversibleBlockNum
+
+		return nil, errors.New("unknown MapReduce implementation")
 	}
 
-	// Start.
-	return NewContext(client, startingBlockNum, endingBlockNum), nil
+	// Start the beast.
+	return runner.Run(client, implementation)
 }

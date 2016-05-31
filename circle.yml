@@ -1,0 +1,18 @@
+general:
+  branches:
+    only:
+      - develop
+      - master
+
+dependencies:
+  pre:
+    - ./scripts/circleci.sh setup
+    - ./scripts/circleci.sh deps
+  override:
+    - ./scripts/circleci.sh compile
+
+test:
+  override:
+    - echo "NO TESTS!"
+  post:
+    - ./scripts/circleci.sh archive
