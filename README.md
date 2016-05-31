@@ -68,6 +68,13 @@ cp -R mapreduce mapreduce_old
 Now you are ready to start hacking. You can consult `mapreduce_old` any time
 something is not entirely clear. When you are done, just run
 
+``
+$ go get
+``
+
+to fetch the dependencies. It is usually enough to run this once at the
+beginning. Then you need to
+
 ```
 $ go build
 ```
