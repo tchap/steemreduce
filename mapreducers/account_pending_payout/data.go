@@ -29,7 +29,7 @@ func (data *Data) WriteOutput(writer io.Writer) error {
 	acc := data.Acc.Accumulator
 
 	// Format and write.
-	tw := tabwriter.NewWriter(writer, 0, 8, 0, '\t', 0)
+	tw := tabwriter.NewWriter(writer, 0, 1, 4, ' ', 0)
 	fmt.Fprintln(tw)
 	fmt.Fprint(tw, "Block\tTitle\tPending Payout\n")
 	fmt.Fprint(tw, "=====\t=====\t==============\n")
