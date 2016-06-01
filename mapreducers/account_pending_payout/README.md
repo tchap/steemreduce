@@ -1,6 +1,7 @@
 # MapReduce: account\_pending\_payout
 
 This MapReduce collects pending payouts for all stories by the given author.
+No curation or comment rewards, this is really just about the story upvotes.
 
 **KoolAid: This MapReduce supports incremental updates.**
 
