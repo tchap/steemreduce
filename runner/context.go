@@ -63,7 +63,6 @@ func Run(client *rpc.Client, implementation BlockMapReducer) (*Context, error) {
 	ctx.acc = acc
 
 	// Get the block range to process.
-	fmt.Println("---> Runner: Getting the block range to process ...")
 	from, to := implementation.BlockRange()
 	if to == 0 {
 		props, err := client.GetDynamicGlobalProperties()
@@ -84,6 +83,7 @@ func Run(client *rpc.Client, implementation BlockMapReducer) (*Context, error) {
 	ctx.wg.Add(numMappers)
 	go func() {
 		ctx.wg.Wait()
+		fmt.Println("---> Mapper: All threads exited")
 		close(ctx.reduceCh)
 	}()
 
@@ -135,6 +135,7 @@ func (ctx *Context) blockFetcher() error {
 	for ; next <= to; next++ {
 		block, err := client.GetBlock(next)
 		if err != nil {
+			bar.FinishPrint(fmt.Sprintf("---> Fetcher: Failed to fetch block %v", next))
 			return err
 		}
 
@@ -143,12 +144,13 @@ func (ctx *Context) blockFetcher() error {
 		select {
 		case ctx.mapCh <- block:
 		case <-ctx.t.Dying():
+			bar.FinishPrint("---> Fetcher: Exiting ...")
 			return nil
 		}
 	}
 
 	// Signal that all blocks have been enqueued.
-	bar.FinishPrint("---> Fetcher: All blocks fetched and enqueued")
+	bar.FinishPrint("---> Fetcher: All blocks fetched and enqueued, exiting ...")
 	close(ctx.mapCh)
 	return nil
 }
@@ -189,7 +191,7 @@ func (ctx *Context) reducer() (err error) {
 
 	// Process the results on exit.
 	defer func() {
-		fmt.Println("---> Reducer: Processing the results ...")
+		fmt.Println("---> Reducer: Processing the results and exiting ...")
 		ex := ctx.implementation.ProcessResults(acc, <-ctx.unprocessedBlockCh)
 		if ex != nil {
 			if err == nil {
@@ -205,7 +207,6 @@ func (ctx *Context) reducer() (err error) {
 		select {
 		case next, ok := <-ctx.reduceCh:
 			if !ok {
-				fmt.Println("---> Reducer: We are done, writing the output ...")
 				return nil
 			}
 			var ex error

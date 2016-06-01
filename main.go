@@ -39,7 +39,7 @@ func _main() error {
 	// Interrupt the process when a signal is received.
 	go func() {
 		<-signalCh
-		fmt.Println("---> Interrupt received, exiting ...")
+		fmt.Println("\n---> Interrupt received, exiting ...")
 		signal.Stop(signalCh)
 		ctx.Interrupt()
 	}()
