@@ -1,9 +1,9 @@
 package accountpendingpayout
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/cheggaaa/pb"
@@ -13,6 +13,8 @@ import (
 const ID = "account_pending_payout"
 
 const DataDirectoryEnvironmentKey = "STEEMREDUCE_PARAMS_DATA_DIR"
+
+var DefaultDataDirectoryPath = filepath.Join("steemreduce_data", ID)
 
 type Story struct {
 	BlockNum      uint32  `json:"block_number"`
@@ -41,7 +43,7 @@ func (reducer *BlockMapReducer) Initialise(client *rpc.Client) (interface{}, err
 	// Get params from the environment.
 	dataDirectoryPath := os.Getenv(DataDirectoryEnvironmentKey)
 	if dataDirectoryPath == "" {
-		return nil, errors.New("environment variable is not set:" + DataDirectoryEnvironmentKey)
+		dataDirectoryPath = DefaultDataDirectoryPath
 	}
 
 	// Load the data.

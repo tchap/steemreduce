@@ -9,15 +9,18 @@ Your personal MapReduce for Steem - https://steem.io
 `steemreduce` does just one thing - it runs MapReduce over the given range of blocks,
 thus allowing you to collect data and generate your own statistics. Cool, right?
 
-There are certain MapReduce implementations already included in `steemreduce`.
-Please check the respective README files in `mapreducers/<mapreduce_id>`.
-
 ## Usage
 
-`steemreduce` is available for you already compiled on
-[CircleCI](https://circleci.com/gh/tchap/steemreduce/tree/master). Just open the
-most recent build, go to the Artifacts tab and choose the right binary for your
-platform.
+`steemreduce` is available for you already compiled on CircleCI, so
+
+1. Go to [CircleCI](https://circleci.com/gh/tchap/steemreduce/tree/master).
+2. Choose the build you want, probably the latest one.
+3. Append `#artifacts` to the URL and press Enter. This will reload the page
+   and expand the Artifacts tab so that you can choose the executable
+   for your plarform and download it.
+4. There are some MapReduce implementations already included in `steemreduce`.
+   Please check the respective `README` files in `mapreducers/<mapreduce_id>`
+   to see how to configure the desired MapReduce.
 
 ## More Handy MapReduce Implementations
 

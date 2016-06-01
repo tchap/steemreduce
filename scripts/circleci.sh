@@ -24,11 +24,18 @@ fetch_dependencies() {
 
 cross_compile() {
 	cd "$PKG_PATH"
-	for os in linux darwin windows; do
-		echo "---> Building ${os}/amd64"
-		GOOS="$os" GOARCH='amd64' go build \
-			-o "build/steemreduce_${os}_amd64" 'github.com/tchap/steemreduce'
-	done
+
+	echo "---> Building linux/amd64"
+	GOOS='linux' GOARCH='amd64' go build \
+		-o "build/steemreduce_linux_amd64" 'github.com/tchap/steemreduce'
+
+	echo "---> Building darwin/amd64"
+	GOOS='darwin' GOARCH='amd64' go build \
+		-o "build/steemreduce_darwin_amd64" 'github.com/tchap/steemreduce'
+
+	echo "---> Building windows/amd64"
+	GOOS='windows' GOARCH='amd64' go build \
+		-o "build/steemreduce_window_amd64.exe" 'github.com/tchap/steemreduce'
 }
 
 archive_artifacts() {

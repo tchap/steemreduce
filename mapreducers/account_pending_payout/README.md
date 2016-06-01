@@ -6,13 +6,16 @@ This MapReduce collects pending payouts for all stories by the given author.
 
 ## Usage
 
-Fist, set the path to the data directory:
+Fist we need to set the path to the data directory. The default path is
+`./steemreduce_data/account_pending_payout` in the current working directory,
+but it can be changed:
 
 ```bash
 export STEEMREDUCE_PARAMS_DATA_DIR=./data
 ```
 
-Now, create the MapReduce JSON file `./data/account_pending_payout/mapreduce.json`:
+But let's just assume we use the default value for now and let's create
+the MapReduce JSON file `./steemreduce_data/account_pending_payout/mapreduce.json`:
 
 ```json
 {
@@ -20,6 +23,16 @@ Now, create the MapReduce JSON file `./data/account_pending_payout/mapreduce.jso
     "author": "void"
   }
 }
+```
+
+In case you want to limit the block range and not go through the whole
+blockchain, insert the following as well, filling your own values:
+
+```json
+  "state": {
+    "block_range_from": 1000000,
+    "block_range_to": 1500000
+  }
 ```
 
 Now you are ready to run MapReduce:
@@ -30,7 +43,7 @@ steemreduce \
 	-mapreduce_id=account_pending_payout
 ```
 
-The output will be located in the `./data/account_pending_payout/output.txt`:
+The output will be located in `output.txt` in the data directory:
 
 ```
 Block   Title                                               Pending Payout
