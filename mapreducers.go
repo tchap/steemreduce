@@ -2,6 +2,7 @@ package main
 
 import (
 	app "github.com/tchap/steemreduce/mapreducers/account_pending_payout"
+	notif "github.com/tchap/steemreduce/mapreducers/notifications"
 	"github.com/tchap/steemreduce/runner"
 )
 
@@ -20,5 +21,6 @@ func MustRegisterMapReducer(id string, implementation runner.BlockMapReducer) {
 }
 
 func init() {
-	MustRegisterMapReducer(app.ID, app.NewBlockMapReducer())
+	MustRegisterMapReducer(app.Id, app.NewBlockMapReducer())
+	MustRegisterMapReducer(notif.Id, notif.NewBlockMapReducer())
 }

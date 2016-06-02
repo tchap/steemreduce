@@ -64,18 +64,11 @@ func Run(client *rpc.Client, implementation BlockMapReducer) (*Context, error) {
 
 	// Get the block range to process.
 	from, to := implementation.BlockRange()
-	if to == 0 {
-		props, err := client.GetDynamicGlobalProperties()
-		if err != nil {
-			return nil, err
-		}
-		to = props.LastIrreversibleBlockNum
-	}
 	ctx.blockRangeFrom = from
 	ctx.blockRangeTo = to
 
 	// Start the fetcher and the reducer.
-	ctx.t.Go(ctx.blockFetcher)
+	ctx.t.Go(ctx.fetcher)
 	ctx.t.Go(ctx.reducer)
 
 	// Close the reduce channel once all mappers are done.
@@ -103,12 +96,70 @@ func (ctx *Context) Wait() error {
 	return ctx.t.Wait()
 }
 
-func (ctx *Context) blockFetcher() error {
+func (ctx *Context) fetcher() error {
 	// Shortcuts.
 	client := ctx.client
 	from, to := ctx.blockRangeFrom, ctx.blockRangeTo
 
 	defer client.Close()
+
+	if to == 0 {
+		return ctx.blockWatcher(from)
+	} else {
+		return ctx.blockFetcher(from, to)
+	}
+}
+
+func (ctx *Context) blockWatcher(from uint32) error {
+	// Shortcuts.
+	client := ctx.client
+
+	// Get config.
+	config, err := client.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	// Fetch all blocks matching the given range.
+	next := from
+	defer func() {
+		ctx.unprocessedBlockCh <- next
+		close(ctx.unprocessedBlockCh)
+	}()
+
+	fmt.Printf("---> Fetcher: Fetching blocks in range [%v, infinity]\n", from)
+	for {
+		// Get current properties.
+		props, err := client.GetDynamicGlobalProperties()
+		if err != nil {
+			return err
+		}
+
+		// Process new blocks.
+		for props.LastIrreversibleBlockNum >= next {
+			block, err := client.GetBlock(next)
+			if err != nil {
+				fmt.Println("---> Fetcher: Failed to fetch block", next)
+				return err
+			}
+
+			select {
+			case ctx.mapCh <- block:
+				next++
+			case <-ctx.t.Dying():
+				fmt.Println("---> Fetcher: Exiting ...")
+				return nil
+			}
+		}
+
+		// Sleep for STEEMIT_BLOCK_INTERVAL seconds before the next iteration.
+		time.Sleep(time.Duration(config.SteemitBlockInterval) * time.Second)
+	}
+}
+
+func (ctx *Context) blockFetcher(from, to uint32) error {
+	// Shortcuts.
+	client := ctx.client
 
 	// Make sure we are not doing bullshit.
 	if from > to {

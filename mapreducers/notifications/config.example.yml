@@ -1,0 +1,129 @@
+# This sections defines what events are being watched.
+watch:
+  # Story published/edited event.
+  stories:
+    # Receive notifications when a story is created by one
+    # of the following authors.
+    authors:
+      - interestingAuthorA
+      - interestingAuthorB
+      - interestingAuthorC
+    # Receive notifications when a story with one of the following
+    # tags is published.
+    tags:
+      - interestingTagA
+      - interestingTagB
+      - interestingTagC
+  # Story vote cast event.
+  story_votes:
+    # Receive notifications when a story from the following authors is voted.
+    authors:
+      - me
+      - somebody
+    # Receive notifications when a story is voted by the following voters.
+    voters:
+      - trustyStoryCurratorA
+      - trustyStoryCurratorB
+      - trustyStoryCurratorC
+  # Comment published/edited event.
+  comments:
+    # Receive notifications when a comment is created by the following authors.
+    authors:
+      - trustyCommenterA
+      - trustyCommenterB
+      - trustyCommenterC
+    # Receive notifications when a reply is posted for a comment by
+    # the following authors.
+    parent_authors:
+      - me
+  # Comment vote cast event.
+  comment_votes:
+    # Receive notifications when a comment from the following authors is voted.
+    authors:
+      - me
+    # Receive notification when any of the following voters votes on a comment.
+    voters:
+      - trustyCommentCurratorA
+      - trustyCommentCurratorB
+      - trustyCommentCurratorC
+
+# The following notification modules are enabled.
+enabled_notifications:
+  - command
+  - email
+
+# Command notification module
+#
+# Each section corresponds to the event type and it specifies the command to be
+# invoked when the given event is encountered.
+#
+# It is possible to use Golang templates to fill in various data. See the
+# examples down there and also the MapReduce sources. What is passed to the
+# rendering function are exactly the event structures with Op and Content.
+command:
+  stories:
+    name: "terminal-notifier"
+    args:
+      - "-appIcon"
+      - "https://steemit.com/images/favicons/favicon-32x32.png"
+      - "-title"
+      - "Steemit"
+      - "-subtitle"
+      - "Story published by @{{.Content.Author}}"
+      - "-message"
+      - "{{.Content.Title}}"
+      - "-open"
+      - "https://steemit.com{{.Content.URL}}"
+  story_votes:
+    name: "terminal-notifier"
+    args:
+      - "-appIcon"
+      - "https://steemit.com/images/favicons/favicon-32x32.png"
+      - "-title"
+      - "Steemit"
+      - "-subtitle"
+      - "Story vote cast by @{{.Op.Voter}}"
+      - "-message"
+      - "${{.Content.PendingPayoutValue}} - @{{.Content.Author}}/{{.Content.Permlink}}"
+      - "-open"
+      - "https://steemit.com{{.Content.URL}}"
+  comments:
+    name: "terminal-notifier"
+    args:
+      - "-appIcon"
+      - "https://steemit.com/images/favicons/favicon-32x32.png"
+      - "-title"
+      - "Steemit"
+      - "-subtitle"
+      - "Comment added by @{{.Content.Author}}"
+      - "-message"
+      - "@{{.Content.Author}}/{{.Content.Permlink}}"
+      - "-open"
+      - "https://steemit.com{{.Content.URL}}"
+  comment_votes:
+    name: "terminal-notifier"
+    args:
+      - "-appIcon"
+      - "https://steemit.com/images/favicons/favicon-32x32.png"
+      - "-title"
+      - "Steemit"
+      - "-subtitle"
+      - "Comment vote cast by {{.Op.Voter}}"
+      - "-message"
+      - "${{.Content.PendingPayoutValue}} - @{{.Content.Author}}/{{.Content.Permlink}}"
+      - "-open"
+      - "https://steemit.com{{.Content.URL}}"
+
+# Email notification module
+#
+# Every time an event is emitted, an email is sent to the relevant email
+# address. It the email templates are hard-coded for now.
+email:
+  smtp_server_host: "smtp.gmail.com"
+  smtp_server_port: 587
+  smtp_username: "me@gmail.com"
+  smtp_password: "secret"
+  from: "me@gmail.com"
+  to:
+    - "me@gmail.com"
+    - "somebody@gmail.com"

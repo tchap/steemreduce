@@ -10,11 +10,11 @@ import (
 	"github.com/go-steem/rpc"
 )
 
-const ID = "account_pending_payout"
+const Id = "account_pending_payout"
 
 const DataDirectoryEnvironmentKey = "STEEMREDUCE_PARAMS_DATA_DIR"
 
-var DefaultDataDirectoryPath = filepath.Join("steemreduce_data", ID)
+var DefaultDataDirectoryPath = filepath.Join("steemreduce_data", Id)
 
 type Story struct {
 	BlockNum      uint32  `json:"block_number"`
@@ -53,6 +53,15 @@ func (reducer *BlockMapReducer) Initialise(client *rpc.Client) (interface{}, err
 	}
 	reducer.data = data
 	reducer.dataDirectoryPath = dataDirectoryPath
+
+	// Get the block range.
+	if data.State.BlockRangeTo == 0 {
+		props, err := client.GetDynamicGlobalProperties()
+		if err != nil {
+			return nil, err
+		}
+		data.State.BlockRangeTo = props.LastIrreversibleBlockNum
+	}
 
 	// Update existing data.
 	if len(data.Acc.Stories) != 0 {
