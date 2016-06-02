@@ -91,6 +91,10 @@ func (reducer *BlockMapReducer) updateData(client *rpc.Client) error {
 			return err
 		}
 
+		if payout < 0 {
+			payout = 0
+		}
+
 		story.PendingPayout = payout
 		acc.TotalPendingPayout += payout
 
@@ -172,6 +176,11 @@ func (reducer *BlockMapReducer) Reduce(client *rpc.Client, _acc, _next interface
 	payout, err := steemToFloat64(content.PendingPayoutValue)
 	if err != nil {
 		return acc, err
+	}
+
+	// Turn negative value into 0.
+	if payout < 0 {
+		payout = 0
 	}
 
 	// Store the payout value in the story object.
