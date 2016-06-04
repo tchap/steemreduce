@@ -44,6 +44,8 @@ func (reducer *BlockMapReducer) Initialise(client *rpc.Client) (interface{}, err
 			notifier, err = NewCommandNotifier(config.Command)
 		case "email":
 			notifier, err = NewEmailNotifier(config.Email)
+		case "slack":
+			notifier, err = NewSlackNotifier(config.Slack)
 		}
 		if err != nil {
 			return nil, err

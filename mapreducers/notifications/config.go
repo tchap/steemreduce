@@ -27,6 +27,7 @@ type Config struct {
 	EnabledNotifications []string               `yaml:"enabled_notifications"`
 	Command              *CommandNotifierConfig `yaml:"command"`
 	Email                *EmailNotifierConfig   `yaml:"email"`
+	Slack                *SlackNotifierConfig   `yaml:"slack"`
 }
 
 func (config *Config) Validate() error {
@@ -41,6 +42,11 @@ func (config *Config) Validate() error {
 		case "email":
 			if config.Email == nil {
 				return errors.New("key not set: email")
+			}
+			ok = true
+		case "slack":
+			if config.Slack == nil {
+				return errors.New("key not set: slack")
 			}
 			ok = true
 		default:

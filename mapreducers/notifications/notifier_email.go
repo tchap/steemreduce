@@ -77,7 +77,7 @@ const commentVoteEventBodyTemplate = `
 @{{.Op.Voter}} has cast a vote on @{{.Content.Author}}/{{.Content.Permlink}}.<br />
 <br />
 Weight: {{.Op.Weight}}</br>
-Pending payout: {{.Content.PendingPayoutValue}}
+Pending payout: {{.Content.PendingPayoutValue}}<br />
 <br />
 You can view the comment directly on <a href="https://steemit.com{{.Content.URL}}">Steemit</a>.
 `

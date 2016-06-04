@@ -51,6 +51,7 @@ watch:
 enabled_notifications:
   - command
   - email
+  - slack
 
 # Command notification module
 #
@@ -127,3 +128,7 @@ email:
   to:
     - "me@gmail.com"
     - "somebody@gmail.com"
+
+# Slack notification module
+slack:
+  webhook_url: "https://hooks.slack.com/services/..."

@@ -71,3 +71,15 @@ The `email` module simply send an email when an event is emitted. As of now it
 is not possible to change the email templates, they are hard-coded.
 
 ![Steemit Email Notifications](https://ipfs.pics/ipfs/QmfPTZkEyo1VLuDKM7igyQwdYpThWxfJ3x69ndzurJ9GB6)
+
+### Slack
+
+The `slack` module makes it possible to receive notifications through
+[Slack](https://slack.com/) (feel free to join [Steem Slack](http://steem.herokuapp.com/)).
+
+All you need is to set up [Incoming WebHooks](https://steem.slack.com/apps/A0F7XDUAZ-incoming-webhooks)
+integration that forwards messages to you personally, then pass the webhook URL
+into the configuration file and you are done. Check `config.example.yml` to see
+the exact format.
+
+![Steemit Slack Notifications](http://i.imgur.com/pr5OlYv.png)
